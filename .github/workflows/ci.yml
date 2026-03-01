@@ -42,7 +42,7 @@ jobs:
             #  # adds an additional copy per link, but it reliably works and
             #  # the additional size is not too large on Windows.
             #  tar_extra_args: '--dereference'
-      fail-fast: true
+      fail-fast: false
 
     runs-on: ${{ matrix.target.os }}
     container: ${{ matrix.target.container }}
