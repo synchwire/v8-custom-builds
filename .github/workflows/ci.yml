@@ -137,24 +137,25 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          tar --directory v8/out/release --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/wee8.tar.xz obj/libwee8.a
-          ls -lh dist/wee8.tar.xz
+          tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
+          ls -lh dist/v8.tar.xz
 
       - name: Zip (Windows)
         if: matrix.target.id == 'windows-amd64'
         shell: bash
         run: |
           mkdir -p dist
-          tar --directory v8/out/release --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/wee8.tar.xz obj/wee8.lib
-          ls -lh dist/wee8.tar.xz
+          tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
+          ls -lh dist/v8.tar.xz
 
-      # - name: Zip
+      # - name: Zip (dummy for testing)
       #   run: |
-      #     mkdir -p release/obj
-      #     echo "Copying wee8.lib to release/obj" > release/obj/libwee8.a
+      #     mkdir -p release/include release/lib
+      #     echo "dummy" > release/lib/libv8.a
+      #     echo "dummy" > release/include/v8.h
       #     mkdir -p dist
-      #     tar --directory release --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/wee8.tar.xz obj/libwee8.a
-      #     ls -lh dist/wee8.tar.xz
+      #     tar --directory release --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
+      #     ls -lh dist/v8.tar.xz
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -204,8 +205,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/linux-amd64/wee8.tar.xz
-          asset_name: wee8-linux-amd64.tar.xz
+          asset_path: artifacts/linux-amd64/v8.tar.xz
+          asset_name: v8-linux-amd64.tar.xz
           asset_content_type: application/gzip
 
       - name: Upload Release Asset Linux musl
@@ -214,8 +215,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/linux-musl/wee8.tar.xz
-          asset_name: wee8-linux-musl.tar.xz
+          asset_path: artifacts/linux-musl/v8.tar.xz
+          asset_name: v8-linux-musl.tar.xz
           asset_content_type: application/gzip
 
       - name: Upload Release Asset Darwin
@@ -224,8 +225,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/darwin-amd64/wee8.tar.xz
-          asset_name: wee8-darwin-amd64.tar.xz
+          asset_path: artifacts/darwin-amd64/v8.tar.xz
+          asset_name: v8-darwin-amd64.tar.xz
           asset_content_type: application/gzip
 
       - name: Upload Release Asset Darwin (aarch64)
@@ -234,8 +235,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/darwin-aarch64/wee8.tar.xz
-          asset_name: wee8-darwin-aarch64.tar.xz
+          asset_path: artifacts/darwin-aarch64/v8.tar.xz
+          asset_name: v8-darwin-aarch64.tar.xz
           asset_content_type: application/gzip
           
       # - name: Upload Release Asset iOS 
@@ -244,8 +245,8 @@ jobs:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #   with:
       #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: artifacts/ios/wee8.tar.xz
-      #     asset_name: wee8-ios.tar.xz
+      #     asset_path: artifacts/ios/v8.tar.xz
+      #     asset_name: v8-ios.tar.xz
       #     asset_content_type: application/gzip
 
       - name: Upload Release Asset Android
@@ -254,8 +255,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/android/wee8.tar.xz
-          asset_name: wee8-android.tar.xz
+          asset_path: artifacts/android/v8.tar.xz
+          asset_name: v8-android.tar.xz
           asset_content_type: application/gzip
 
       # - name: Upload Release Asset Windows
@@ -264,6 +265,6 @@ jobs:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #   with:
       #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: artifacts/windows-amd64/wee8.tar.xz
-      #     asset_name: wee8-windows-amd64.tar.xz
+      #     asset_path: artifacts/windows-amd64/v8.tar.xz
+      #     asset_name: v8-windows-amd64.tar.xz
       #     asset_content_type: application/gzip

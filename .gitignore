@@ -1,3 +1,5 @@
 .gclient*
 .gcs_*
 .DS_Store
+v8/*
+/v8

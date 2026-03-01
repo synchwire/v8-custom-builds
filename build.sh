@@ -8,7 +8,7 @@ set -x
 DEPOT_TOOLS_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR="/tmp/depot_tools"
 
-V8_TAG=${V8_TAG:-"13.5.156"}
+V8_TAG=${V8_TAG:-"13.6.233"}
 
 if [ -z "$1" ]; then 
   case $(uname -m) in
@@ -93,6 +93,7 @@ gn gen out/release --args="is_debug=false \
   treat_warnings_as_errors=false \
   v8_enable_fast_mksnapshot = true \
   v8_enable_handle_zapping = false \
+  v8_enable_pointer_compression = true \
   target_cpu=\"$ARCH\" \
   v8_target_cpu=\"$ARCH\" \
   target_os=\"$OS\" \
@@ -118,6 +119,7 @@ gn gen out/release --args="is_debug=false \
   treat_warnings_as_errors=false \
   v8_enable_fast_mksnapshot = true \
   v8_enable_handle_zapping = false \
+  v8_enable_pointer_compression = true \
   target_cpu=\"$ARCH\" \
   v8_target_cpu=\"$ARCH\" \
   target_os=\"$OS\" \
@@ -127,3 +129,27 @@ fi
 ninja -C out/release wee8
 
 ls -laR out/release/obj
+
+# Package the output into a proper directory structure:
+#   include/         - V8 public headers
+#   include/wasm-c-api/wasm.h - Wasm C API header (patched)
+#   lib/libv8.a      - The built library
+DIST_DIR="out/dist"
+rm -rf "$DIST_DIR"
+mkdir -p "$DIST_DIR/include"
+mkdir -p "$DIST_DIR/include/wasm-c-api"
+mkdir -p "$DIST_DIR/lib"
+
+# Copy V8 public headers (preserving subdirectory structure)
+cp -R include/* "$DIST_DIR/include/"
+# Remove non-header files
+find "$DIST_DIR/include" -type f ! -name "*.h" -delete
+
+# Copy the patched wasm C API header
+cp third_party/wasm-api/wasm.h "$DIST_DIR/include/wasm-c-api/wasm.h"
+
+# Copy the library (renamed from libwee8.a to libv8.a)
+cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
+
+echo "=== Distribution layout ==="
+find "$DIST_DIR" -type f | sort
