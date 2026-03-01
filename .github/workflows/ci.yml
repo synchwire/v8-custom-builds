@@ -19,7 +19,7 @@ jobs:
           - id: 'linux-musl'
             os: 'ubuntu-22.04'
             native: true
-            container: alpine:3.19
+            container: alpine:3.21
           - id: 'darwin-amd64'
             os: 'macos-13'
             native: true
