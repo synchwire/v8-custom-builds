@@ -66,7 +66,11 @@ fi
 cd v8
 git reset --hard
 git checkout $V8_TAG
-gclient sync --with_branch_heads --with_tags
+# Sync deps without hooks to avoid downloading unnecessary test data
+# (wasm-spec-tests, wasm-js) which can fail on musl/Alpine due to gsutil issues.
+gclient sync --with_branch_heads --with_tags --nohooks
+# Run only the hooks required for building
+python3 build/util/lastchange.py -o build/util/LASTCHANGE
 
 for patch in ../patches/*.patch; do 
   git apply "$patch"
@@ -94,6 +98,8 @@ gn gen out/release --args="is_debug=false \
   v8_enable_fast_mksnapshot = true \
   v8_enable_handle_zapping = false \
   v8_enable_pointer_compression = true \
+  v8_enable_short_builtin_calls = true \
+  ios_enable_code_signing = false \
   target_cpu=\"$ARCH\" \
   v8_target_cpu=\"$ARCH\" \
   target_os=\"$OS\" \
