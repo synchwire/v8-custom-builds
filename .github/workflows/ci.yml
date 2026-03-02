@@ -19,14 +19,14 @@ jobs:
             os: 'ubuntu-22.04'
             native: true
             container: alpine:3.21
-          - id: 'darwin-amd64'
-            os: 'macos-15-large'
-            native: true
+          # - id: 'darwin-amd64'
+          #   os: 'macos-15-large'
+          #   native: true
           - id: 'darwin-aarch64'
             os: 'macos-15'
             native: true
           - id: 'ios'
-            os: 'macos-15'
+            os: 'darwin-aarch64'
             native: false
           - id: 'android'
             os: 'ubuntu-22.04'
@@ -216,15 +216,15 @@ jobs:
           asset_name: v8-linux-musl.tar.xz
           asset_content_type: application/gzip
 
-      - name: Upload Release Asset Darwin
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/darwin-amd64/v8.tar.xz
-          asset_name: v8-darwin-amd64.tar.xz
-          asset_content_type: application/gzip
+      # - name: Upload Release Asset Darwin
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: artifacts/darwin-amd64/v8.tar.xz
+      #     asset_name: v8-darwin-amd64.tar.xz
+      #     asset_content_type: application/gzip
 
       - name: Upload Release Asset Darwin (aarch64)
         uses: actions/upload-release-asset@v1
