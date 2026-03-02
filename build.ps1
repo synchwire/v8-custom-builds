@@ -37,8 +37,29 @@ foreach ($f in $files){
   git apply --ignore-whitespace $f
 }
 
-# Use single-quoted string to preserve inner double quotes for GN args
-gn gen out/release --args='is_debug=false v8_symbol_level=2 is_component_build=false is_official_build=false use_custom_libcxx=false use_custom_libcxx_for_host=true use_glib=false v8_expose_symbols=true v8_optimized_debug=false v8_enable_sandbox=false v8_enable_i18n_support=false v8_enable_gdbjit=false v8_use_external_startup_data=false v8_enable_pointer_compression=true v8_enable_short_builtin_calls=true treat_warnings_as_errors=false target_cpu="x64" v8_target_cpu="x64"'
+# Write args.gn directly to avoid PowerShell quote-stripping issues
+New-Item -ItemType Directory -Force -Path "out\release" | Out-Null
+@'
+is_debug = false
+v8_symbol_level = 2
+is_component_build = false
+is_official_build = false
+use_custom_libcxx = false
+use_custom_libcxx_for_host = true
+use_glib = false
+v8_expose_symbols = true
+v8_optimized_debug = false
+v8_enable_sandbox = false
+v8_enable_i18n_support = false
+v8_enable_gdbjit = false
+v8_use_external_startup_data = false
+v8_enable_pointer_compression = true
+v8_enable_short_builtin_calls = true
+treat_warnings_as_errors = false
+target_cpu = "x64"
+v8_target_cpu = "x64"
+'@ | Set-Content -Path "out\release\args.gn" -Encoding utf8
+gn gen out/release
 
 # Showtime!
 ninja -C out/release wee8
