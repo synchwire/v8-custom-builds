@@ -1,4 +1,6 @@
 $ErrorActionPreference = "Stop"
+# Make native command failures (non-zero exit code) throw terminating errors
+$PSNativeCommandUseErrorActionPreference = $true
 
 $DEPOT_TOOLS_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 $V8_TAG="13.6.233"
@@ -29,13 +31,14 @@ gclient sync --with_branch_heads --with_tags --nohooks
 # Run only the hooks required for building
 python3 build/util/lastchange.py -o build/util/LASTCHANGE
 
-# Apply patches
+# Apply patches (--ignore-whitespace handles CRLF differences on Windows)
 $files = Get-ChildItem "../patches" -Filter *.patch
 foreach ($f in $files){
-  git apply $f
+  git apply --ignore-whitespace $f
 }
 
-gn gen out/release --args="is_debug=false v8_symbol_level=2 is_component_build=false is_official_build=false use_custom_libcxx=false use_custom_libcxx_for_host=true use_glib=false v8_expose_symbols=true v8_optimized_debug=false v8_enable_sandbox=false v8_enable_i18n_support=false v8_enable_gdbjit=false v8_use_external_startup_data=false v8_enable_pointer_compression=true v8_enable_short_builtin_calls=true treat_warnings_as_errors=false target_cpu=`"x64`" v8_target_cpu=`"x64`""
+# Use single-quoted string to preserve inner double quotes for GN args
+gn gen out/release --args='is_debug=false v8_symbol_level=2 is_component_build=false is_official_build=false use_custom_libcxx=false use_custom_libcxx_for_host=true use_glib=false v8_expose_symbols=true v8_optimized_debug=false v8_enable_sandbox=false v8_enable_i18n_support=false v8_enable_gdbjit=false v8_use_external_startup_data=false v8_enable_pointer_compression=true v8_enable_short_builtin_calls=true treat_warnings_as_errors=false target_cpu="x64" v8_target_cpu="x64"'
 
 # Showtime!
 ninja -C out/release wee8

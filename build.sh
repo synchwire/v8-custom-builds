@@ -99,13 +99,14 @@ gn gen out/release --args="is_debug=false \
   v8_enable_handle_zapping = false \
   v8_enable_pointer_compression = true \
   v8_enable_short_builtin_calls = true \
+  v8_monolithic = true \
   ios_enable_code_signing = false \
   target_cpu=\"$ARCH\" \
   v8_target_cpu=\"$ARCH\" \
   target_os=\"$OS\" \
   target_environment=\"device\" \
   "
-else 
+else
 gn gen out/release --args="is_debug=false \
   v8_symbol_level=0 \
   symbol_level = 0 \
@@ -131,8 +132,13 @@ gn gen out/release --args="is_debug=false \
   target_os=\"$OS\" \
   "
 fi
+
 # Showtime!
-ninja -C out/release wee8
+if [ "$OS" == "ios" ]; then
+  ninja -C out/release v8_monolith
+else
+  ninja -C out/release wee8
+fi
 
 ls -laR out/release/obj
 
@@ -154,8 +160,12 @@ find "$DIST_DIR/include" -type f ! -name "*.h" -delete
 # Copy the patched wasm C API header
 cp third_party/wasm-api/wasm.h "$DIST_DIR/include/wasm-c-api/wasm.h"
 
-# Copy the library (renamed from libwee8.a to libv8.a)
-cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
+# Copy the library (renamed to libv8.a)
+if [ "$OS" == "ios" ]; then
+  cp out/release/obj/libv8_monolith.a "$DIST_DIR/lib/libv8.a"
+else
+  cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
+fi
 
 echo "=== Distribution layout ==="
 find "$DIST_DIR" -type f | sort
