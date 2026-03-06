@@ -8,7 +8,7 @@ set -x
 DEPOT_TOOLS_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR="/tmp/depot_tools"
 
-V8_TAG=${V8_TAG:-"13.6.233"}
+V8_TAG=${V8_TAG:-"13.6.233.17"}
 
 if [ -z "$1" ]; then 
   case $(uname -m) in
@@ -91,7 +91,8 @@ gn gen out/release --args="is_debug=false \
   v8_expose_symbols=true \
   v8_optimized_debug=false \
   v8_enable_sandbox=false \
-  v8_enable_i18n_support=false \
+  v8_enable_i18n_support=true \
+  icu_use_data_file=false \
   v8_enable_gdbjit=false \
   v8_use_external_startup_data=false \
   treat_warnings_as_errors=false \
@@ -120,7 +121,8 @@ gn gen out/release --args="is_debug=false \
   v8_expose_symbols=true \
   v8_optimized_debug=false \
   v8_enable_sandbox=false \
-  v8_enable_i18n_support=false \
+  v8_enable_i18n_support=true \
+  icu_use_data_file=false \
   v8_enable_gdbjit=false \
   v8_use_external_startup_data=false \
   treat_warnings_as_errors=false \

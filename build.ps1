@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
 $DEPOT_TOOLS_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
-$V8_TAG="13.6.233"
+$V8_TAG="13.6.233.17"
 
 # Clone depot-tools
 if (-not (Test-Path -Path "depot_tools" -PathType Container)) {
@@ -50,7 +50,8 @@ use_glib = false
 v8_expose_symbols = true
 v8_optimized_debug = false
 v8_enable_sandbox = false
-v8_enable_i18n_support = false
+v8_enable_i18n_support = true
+icu_use_data_file = false
 v8_enable_gdbjit = false
 v8_use_external_startup_data = false
 v8_enable_pointer_compression = true
