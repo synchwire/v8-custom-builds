@@ -152,11 +152,12 @@ gn gen out/release --args="is_debug=false \
 fi
 
 # Showtime!
-if [ "$OS" == "ios" ]; then
-  ninja -C out/release v8_monolith
-else
-  ninja -C out/release wee8
-fi
+# Build wee8 on every platform, including iOS. The wee8 target bundles
+# the wasm-c-api shim (wasm_engine_new, wasm_module_new, ...) that
+# downstream consumers such as wasmer actually link against. The larger
+# v8_monolith target omits those C-ABI symbols, which leaves the
+# library unusable for wasmer's bindgen-rewritten imports.
+ninja -C out/release wee8
 
 ls -laR out/release/obj
 
@@ -179,11 +180,7 @@ find "$DIST_DIR/include" -type f ! -name "*.h" -delete
 cp third_party/wasm-api/wasm.h "$DIST_DIR/include/wasm-c-api/wasm.h"
 
 # Copy the library (renamed to libv8.a)
-if [ "$OS" == "ios" ]; then
-  cp out/release/obj/libv8_monolith.a "$DIST_DIR/lib/libv8.a"
-else
-  cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
-fi
+cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
 
 echo "=== Distribution layout ==="
 find "$DIST_DIR" -type f | sort
