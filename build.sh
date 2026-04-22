@@ -78,6 +78,19 @@ done
 
 if [ "$OS" == "ios" ]
 then
+# V8 forces v8_enable_lite_mode=true on iOS by default unless
+# ios_deployment_target is exactly "17.4" (see gni/v8.gni). Lite mode
+# disables Wasm and Turbofan, and triggers a torque build inconsistency
+# where base.tq still references WasmFuncRef while the wasm .tq files
+# are dropped from torque's sources list. Force the three related
+# flags off/on explicitly so the build is deterministic regardless of
+# ios_deployment_target.
+#
+# Note: the resulting binary contains JIT codegen paths. Apple does not
+# grant the JIT entitlement to non-browser iOS apps, so the embedder
+# (wasmer/holochain) must initialize V8 with `--jitless` at runtime so
+# no RWX pages are ever requested — which is what Apple actually
+# enforces.
 gn gen out/release --args="is_debug=false \
   v8_symbol_level=0 \
   symbol_level = 0 \
@@ -100,6 +113,9 @@ gn gen out/release --args="is_debug=false \
   v8_enable_handle_zapping = false \
   v8_enable_pointer_compression = true \
   v8_enable_short_builtin_calls = true \
+  v8_enable_lite_mode = false \
+  v8_enable_webassembly = true \
+  v8_enable_turbofan = true \
   v8_monolithic = true \
   ios_enable_code_signing = false \
   target_cpu=\"$ARCH\" \
