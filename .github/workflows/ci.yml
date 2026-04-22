@@ -9,38 +9,41 @@ jobs:
     strategy:
       matrix:
         target:
-          - id: 'linux-amd64'
-            os: "ubuntu-22.04"
-            native: true
-            #- id: 'linux-arm64'
-            #  os: 'ubuntu-24.04-arm'
-            #  native: true
-          - id: 'linux-musl'
-            os: 'ubuntu-22.04'
-            native: true
-            container: alpine:3.21
+          # TEMPORARY: matrix narrowed to iOS only while we iterate on the
+          # iOS build. Restore the full matrix (linux-amd64, linux-musl,
+          # darwin-aarch64, android, windows-amd64) once iOS is green.
+          # - id: 'linux-amd64'
+          #   os: "ubuntu-22.04"
+          #   native: true
+          #- id: 'linux-arm64'
+          #  os: 'ubuntu-24.04-arm'
+          #  native: true
+          # - id: 'linux-musl'
+          #   os: 'ubuntu-22.04'
+          #   native: true
+          #   container: alpine:3.21
           # - id: 'darwin-amd64'
           #   os: 'macos-15-large'
           #   native: true
-          - id: 'darwin-aarch64'
-            os: 'macos-15'
-            native: true
+          # - id: 'darwin-aarch64'
+          #   os: 'macos-15'
+          #   native: true
           - id: 'ios'
             os: 'darwin-aarch64'
             native: false
-          - id: 'android'
-            os: 'ubuntu-22.04'
-            native: false
-          - id: 'windows-amd64'
-            os: 'windows-2022'
-            native: true
-            # When unpacking an archive on Windows, the symlinks can't be
-            # created unless the target path already exists. This causes
-            # problems when the linked file is ordered after the link
-            # inside the archive. Dereferencing the files when packing them
-            # adds an additional copy per link, but it reliably works and
-            # the additional size is not too large on Windows.
-            tar_extra_args: '--dereference'
+          # - id: 'android'
+          #   os: 'ubuntu-22.04'
+          #   native: false
+          # - id: 'windows-amd64'
+          #   os: 'windows-2022'
+          #   native: true
+          #   # When unpacking an archive on Windows, the symlinks can't be
+          #   # created unless the target path already exists. This causes
+          #   # problems when the linked file is ordered after the link
+          #   # inside the archive. Dereferencing the files when packing them
+          #   # adds an additional copy per link, but it reliably works and
+          #   # the additional size is not too large on Windows.
+          #   tar_extra_args: '--dereference'
       fail-fast: false
 
     runs-on: ${{ matrix.target.os }}
