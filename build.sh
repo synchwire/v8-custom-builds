@@ -78,12 +78,6 @@ done
 
 if [ "$OS" == "ios" ]
 then
-# iOS build: jitless is mandatory. Apple does not grant the JIT entitlement
-# (`com.apple.security.cs.allow-jit`) to apps outside the BrowserEngineKit
-# carve-out, so any build that generates executable code at runtime fails
-# App Store review. `v8_jitless=true` routes Wasm and JS through the
-# interpreter paths; pointer compression and short builtin calls are tied
-# to JITed codegen assumptions and are disabled to match.
 gn gen out/release --args="is_debug=false \
   v8_symbol_level=0 \
   symbol_level = 0 \
@@ -104,9 +98,8 @@ gn gen out/release --args="is_debug=false \
   treat_warnings_as_errors=false \
   v8_enable_fast_mksnapshot = true \
   v8_enable_handle_zapping = false \
-  v8_jitless = true \
-  v8_enable_pointer_compression = false \
-  v8_enable_short_builtin_calls = false \
+  v8_enable_pointer_compression = true \
+  v8_enable_short_builtin_calls = true \
   v8_monolithic = true \
   ios_enable_code_signing = false \
   target_cpu=\"$ARCH\" \
