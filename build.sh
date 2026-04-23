@@ -161,15 +161,16 @@ ninja -C out/release wee8
 
 ls -laR out/release/obj
 
-# Package the output into a proper directory structure:
+# Package the output into a directory structure that matches what
+# wasmer's `lib/api/build.rs` expects when it unpacks a wee8 tarball:
 #   include/         - V8 public headers
 #   include/wasm-c-api/wasm.h - Wasm C API header (patched)
-#   lib/libv8.a      - The built library
+#   obj/libwee8.a    - The built library, same name and path as upstream
 DIST_DIR="out/dist"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR/include"
 mkdir -p "$DIST_DIR/include/wasm-c-api"
-mkdir -p "$DIST_DIR/lib"
+mkdir -p "$DIST_DIR/obj"
 
 # Copy V8 public headers (preserving subdirectory structure)
 cp -R include/* "$DIST_DIR/include/"
@@ -179,8 +180,9 @@ find "$DIST_DIR/include" -type f ! -name "*.h" -delete
 # Copy the patched wasm C API header
 cp third_party/wasm-api/wasm.h "$DIST_DIR/include/wasm-c-api/wasm.h"
 
-# Copy the library (renamed to libv8.a)
-cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
+# Copy the library with its upstream name so wasmer's build.rs can
+# find it at the path it already expects.
+cp out/release/obj/libwee8.a "$DIST_DIR/obj/libwee8.a"
 
 echo "=== Distribution layout ==="
 find "$DIST_DIR" -type f | sort
