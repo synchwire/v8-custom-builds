@@ -143,11 +143,10 @@ gn gen out/release --args="is_debug=false \
 fi
 
 # Showtime!
-if [ "$OS" == "ios" ]; then
-  ninja -C out/release v8_monolith
-else
-  ninja -C out/release wee8
-fi
+# wee8 bundles the wasm-c-api shim (wasm_engine_new, wasm_module_new, ...)
+# that downstream consumers link against. v8_monolith is larger but
+# omits those C-ABI symbols.
+ninja -C out/release wee8
 
 ls -laR out/release/obj
 
@@ -170,11 +169,7 @@ find "$DIST_DIR/include" -type f ! -name "*.h" -delete
 cp third_party/wasm-api/wasm.h "$DIST_DIR/include/wasm-c-api/wasm.h"
 
 # Copy the library (renamed to libv8.a)
-if [ "$OS" == "ios" ]; then
-  cp out/release/obj/libv8_monolith.a "$DIST_DIR/lib/libv8.a"
-else
-  cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
-fi
+cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
 
 echo "=== Distribution layout ==="
 find "$DIST_DIR" -type f | sort
