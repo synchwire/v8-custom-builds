@@ -134,13 +134,17 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
+          tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include obj
           ls -lh dist/v8.tar.xz
 
       - name: Zip (Windows)
         if: matrix.target.id == 'windows-amd64'
         shell: bash
         run: |
+          # Windows builds the v8_monolith ninja target rather than
+          # wee8 because wee8 has dllimport/dllexport issues on
+          # Windows. It packages as lib/v8.lib, so the tar layout
+          # here stays on include/lib.
           mkdir -p dist
           tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
           ls -lh dist/v8.tar.xz
