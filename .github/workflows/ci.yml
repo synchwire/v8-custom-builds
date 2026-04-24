@@ -47,7 +47,7 @@ jobs:
     container: ${{ matrix.target.container }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Install dependencies on Ubuntu
         if: startsWith(matrix.target.id, 'linux-amd64')
@@ -159,7 +159,7 @@ jobs:
       #     ls -lh dist/v8.tar.xz
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target.id }}
           path: dist
@@ -175,7 +175,7 @@ jobs:
 
     steps:
       - name: Download the Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
