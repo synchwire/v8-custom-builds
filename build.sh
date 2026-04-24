@@ -78,6 +78,10 @@ done
 
 if [ "$OS" == "ios" ]
 then
+# V8's iOS profile turns lite_mode on (and wasm/turbofan off) by
+# default whenever ios_deployment_target != "17.4". Pin all three
+# related flags explicitly so the output is deterministic regardless
+# of that target.
 gn gen out/release --args="is_debug=false \
   v8_symbol_level=0 \
   symbol_level = 0 \
@@ -100,6 +104,9 @@ gn gen out/release --args="is_debug=false \
   v8_enable_handle_zapping = false \
   v8_enable_pointer_compression = true \
   v8_enable_short_builtin_calls = true \
+  v8_enable_lite_mode = false \
+  v8_enable_webassembly = true \
+  v8_enable_turbofan = true \
   v8_monolithic = true \
   ios_enable_code_signing = false \
   target_cpu=\"$ARCH\" \
