@@ -8,7 +8,7 @@ set -x
 DEPOT_TOOLS_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR="/tmp/depot_tools"
 
-V8_TAG=${V8_TAG:-"13.6.233.17"}
+V8_TAG=${V8_TAG:-"15.0.1"}
 
 if [ -z "$1" ]; then 
   case $(uname -m) in
@@ -72,25 +72,12 @@ gclient sync --with_branch_heads --with_tags --nohooks
 # Run only the hooks required for building
 python3 build/util/lastchange.py -o build/util/LASTCHANGE
 
-for patch in ../patches/*.patch; do 
+for patch in ../patches/*.patch; do
   git apply "$patch"
 done
 
 if [ "$OS" == "ios" ]
 then
-# V8 forces v8_enable_lite_mode=true on iOS by default unless
-# ios_deployment_target is exactly "17.4" (see gni/v8.gni). Lite mode
-# disables Wasm and Turbofan, and triggers a torque build inconsistency
-# where base.tq still references WasmFuncRef while the wasm .tq files
-# are dropped from torque's sources list. Force the three related
-# flags off/on explicitly so the build is deterministic regardless of
-# ios_deployment_target.
-#
-# Note: the resulting binary contains JIT codegen paths. Apple does not
-# grant the JIT entitlement to non-browser iOS apps, so the embedder
-# (wasmer/holochain) must initialize V8 with `--jitless` at runtime so
-# no RWX pages are ever requested — which is what Apple actually
-# enforces.
 gn gen out/release --args="is_debug=false \
   v8_symbol_level=0 \
   symbol_level = 0 \
@@ -112,10 +99,8 @@ gn gen out/release --args="is_debug=false \
   v8_enable_fast_mksnapshot = true \
   v8_enable_handle_zapping = false \
   v8_enable_pointer_compression = true \
+  use_siso = false \
   v8_enable_short_builtin_calls = true \
-  v8_enable_lite_mode = false \
-  v8_enable_webassembly = true \
-  v8_enable_turbofan = true \
   v8_monolithic = true \
   ios_enable_code_signing = false \
   target_cpu=\"$ARCH\" \
@@ -145,6 +130,7 @@ gn gen out/release --args="is_debug=false \
   v8_enable_fast_mksnapshot = true \
   v8_enable_handle_zapping = false \
   v8_enable_pointer_compression = true \
+  use_siso = false \
   target_cpu=\"$ARCH\" \
   v8_target_cpu=\"$ARCH\" \
   target_os=\"$OS\" \
@@ -152,25 +138,23 @@ gn gen out/release --args="is_debug=false \
 fi
 
 # Showtime!
-# Build wee8 on every platform, including iOS. The wee8 target bundles
-# the wasm-c-api shim (wasm_engine_new, wasm_module_new, ...) that
-# downstream consumers such as wasmer actually link against. The larger
-# v8_monolith target omits those C-ABI symbols, which leaves the
-# library unusable for wasmer's bindgen-rewritten imports.
-ninja -C out/release wee8
+if [ "$OS" == "ios" ]; then
+  ninja -C out/release v8_monolith
+else
+  ninja -C out/release wee8
+fi
 
 ls -laR out/release/obj
 
-# Package the output into a directory structure that matches what
-# wasmer's `lib/api/build.rs` expects when it unpacks a wee8 tarball:
+# Package the output into a proper directory structure:
 #   include/         - V8 public headers
 #   include/wasm-c-api/wasm.h - Wasm C API header (patched)
-#   obj/libwee8.a    - The built library, same name and path as upstream
+#   lib/libv8.a      - The built library
 DIST_DIR="out/dist"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR/include"
 mkdir -p "$DIST_DIR/include/wasm-c-api"
-mkdir -p "$DIST_DIR/obj"
+mkdir -p "$DIST_DIR/lib"
 
 # Copy V8 public headers (preserving subdirectory structure)
 cp -R include/* "$DIST_DIR/include/"
@@ -180,9 +164,12 @@ find "$DIST_DIR/include" -type f ! -name "*.h" -delete
 # Copy the patched wasm C API header
 cp third_party/wasm-api/wasm.h "$DIST_DIR/include/wasm-c-api/wasm.h"
 
-# Copy the library with its upstream name so wasmer's build.rs can
-# find it at the path it already expects.
-cp out/release/obj/libwee8.a "$DIST_DIR/obj/libwee8.a"
+# Copy the library (renamed to libv8.a)
+if [ "$OS" == "ios" ]; then
+  cp out/release/obj/libv8_monolith.a "$DIST_DIR/lib/libv8.a"
+else
+  cp out/release/obj/libwee8.a "$DIST_DIR/lib/libv8.a"
+fi
 
 echo "=== Distribution layout ==="
 find "$DIST_DIR" -type f | sort
