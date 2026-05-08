@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: synchwire <gregoryj@ephyrasoftware.com>
+Date: Tue, 6 May 2026 12:00:00 +0000
+Subject: [PATCH] BUILD.gn: defend linker_path reference for older gn versions
+
+V8's BUILD.gn references `linker_path` (set in chromium's
+build/config/compiler/compiler.gni). On Alpine Linux's apk-installed
+gn (3.22 ships gn 2025-05-27), the import chain reaching V8's
+BUILD.gn doesn't bring linker_path into scope and gn errors with
+`Undefined identifier`. The same arg layout works under depot_tools'
+gn on glibc systems. Wrap the reference with `defined()` so the
+expression evaluates safely either way.
+---
+ BUILD.gn | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/BUILD.gn b/BUILD.gn
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -7997,7 +7997,7 @@ config("disable_icf") {
+       ldflags = [ "/OPT:NOICF" ]  # link.exe, but also lld-link.exe.
+     } else if (is_apple && !use_lld) {
+       ldflags = [ "-Wl,-no_deduplicate" ]  # ld64.
+-    } else if (use_lld || linker_path != "") {
++    } else if (use_lld || (defined(linker_path) && linker_path != "")) {
+       ldflags = [ "-Wl,--icf=none" ]
+     }
+   }
+--
+2.48.1
