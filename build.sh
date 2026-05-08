@@ -95,12 +95,6 @@ if [ "$OS" == "linux" ]; then
     export CXX=clang++
     export AR=llvm-ar
     export NM=llvm-nm
-    # Chromium passes -Z (nightly-only) flags to rustc unconditionally.
-    # rustc_nightly_capability swap didn't match in V8 15's bundled build/
-    # tree (different formulation). RUSTC_BOOTSTRAP=1 makes stable rustc
-    # accept -Z flags as if it were nightly. Standard workaround used by
-    # many distro chromium packagers.
-    export RUSTC_BOOTSTRAP=1
     # Chromium's buildtools/third_party/libc++/__config_site hardcodes
     # _LIBCPP_HAS_MUSL_LIBC 0 unless ANDROID_HOST_MUSL is set; that file
     # is force-included into every TU and overrides any -D from CXXFLAGS.
