@@ -1,8 +1,6 @@
 name: Build
 
-on:
-  push:
-  workflow_dispatch:
+on: [push]
 
 jobs:
   build:
@@ -20,16 +18,16 @@ jobs:
           - id: 'linux-musl'
             os: 'ubuntu-22.04'
             native: true
-            container: alpine:3.21
+            container: alpine:3.22
           # - id: 'darwin-amd64'
           #   os: 'macos-15-large'
           #   native: true
           - id: 'darwin-aarch64'
             os: 'macos-15'
             native: true
-          - id: 'ios'
-            os: 'macos-15'
-            native: false
+          # - id: 'ios'
+          #   os: 'darwin-aarch64'
+          #   native: false
           - id: 'android'
             os: 'ubuntu-22.04'
             native: false
@@ -49,7 +47,7 @@ jobs:
     container: ${{ matrix.target.container }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v3
 
       - name: Install dependencies on Ubuntu
         if: startsWith(matrix.target.id, 'linux-amd64')
@@ -73,13 +71,23 @@ jobs:
       - name: Install dependencies on Alpine
         if: startsWith(matrix.target.id, 'linux-musl')
         run: |
-          apk add ninja bash git cmake clang-dev llvm-dev wget python3 alpine-sdk curl git tar xz py3-virtualenv py3-google-auth-httplib2 py3-httplib2 py3-distutils-extra py3-setuptools py3-pip py3-six gn
+          apk add ninja bash git cmake clang-dev compiler-rt lld llvm-dev rust rust-bindgen rustfmt wget python3 curl tar xz py3-virtualenv py3-httplib2 py3-google-auth-httplib2 py3-setuptools py3-pip py3-six py3-distutils-extra
+          # Alpine's apk gn lags upstream and fails on V8 15's chromium build/
+          # tree (missing substitutions like module_deps_no_self). Build gn
+          # from source so the toolchain matches V8's build/ expectations.
+          # Full clone (gn's gen.py runs `git describe --match initial-commit`
+          # for its last_commit_position; shallow clone breaks that lookup).
+          git clone https://gn.googlesource.com/gn /tmp/gn
+          cd /tmp/gn
+          python3 build/gen.py
+          ninja -C out
+          install -m 0755 out/gn /usr/local/bin/gn
 
       - name: Install dependencies on macOS
         if: startsWith(matrix.target.id, 'darwin-') || matrix.target.id == 'ios'
         shell: bash
         run: |
-          brew install ninja llvm@18
+          brew install ninja llvm@22
 
       - name: Set default Xcode on macOS
         if: startsWith(matrix.target.id, 'darwin-') || matrix.target.id == 'ios'
@@ -119,7 +127,7 @@ jobs:
         if: matrix.target.id == 'linux-musl'
         shell: bash
         run: |
-          CXX=clang++-18 ./build.sh
+          ./build.sh
         env:
           VPYTHON_BYPASS: "manually managed python not supported by chrome operations"
           DEPOT_TOOLS_BOOTSTRAP_PYTHON3: "0"
@@ -136,21 +144,13 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include obj
+          tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
           ls -lh dist/v8.tar.xz
 
       - name: Zip (Windows)
         if: matrix.target.id == 'windows-amd64'
         shell: bash
         run: |
-          # Windows uses build.ps1 (not build.sh) and builds the
-          # v8_monolith ninja target rather than wee8 because wee8 has
-          # dllimport/dllexport issues on Windows. It packages as
-          # lib/v8.lib, so the tar layout here stays on include/lib.
-          # Downstream wasmer consumers don't use this tarball today —
-          # v8_monolith doesn't export the wasm_* C-API symbols — but
-          # leaving it building avoids breaking anyone already pulling
-          # it directly.
           mkdir -p dist
           tar --directory v8/out/dist --create --xz --verbose ${{ matrix.target.tar_extra_args }} --file dist/v8.tar.xz include lib
           ls -lh dist/v8.tar.xz
@@ -165,7 +165,7 @@ jobs:
       #     ls -lh dist/v8.tar.xz
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target.id }}
           path: dist
@@ -181,7 +181,7 @@ jobs:
 
     steps:
       - name: Download the Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 

@@ -78,11 +78,69 @@ done
 
 # V8 14.x+ headers (e.g. src/base/macros.h) use clang-only constructs like
 # __has_warning(...) that GCC's preprocessor can't parse. Use clang on Linux.
-# Download chromium's bundled clang (system clang's runtime library
-# libclang_rt.builtins.a is often absent under apt's clang package).
+# On glibc systems, download chromium's bundled clang (system clang's runtime
+# library libclang_rt.builtins.a is often absent under apt's clang package).
+# On musl/Alpine, the chromium prebuilt is glibc-linked and won't run, so use
+# the system clang installed via apk and skip lld (chromium's clang assumes
+# its bundled lld is on PATH; system clang doesn't ship it).
 if [ "$OS" == "linux" ]; then
-  python3 tools/clang/scripts/update.py
-  CLANG_ARGS="is_clang=true use_custom_libcxx=false use_custom_libcxx_for_host=false"
+  if [ -f /etc/alpine-release ]; then
+    # Approach modelled on Void Linux's chromium template + Alpine community
+    # APKBUILD. Use chromium's `unbundle:default` toolchain — chromium's
+    # built-in escape hatch that honours $CC/$CXX/$AR/$NM env. This avoids
+    # fighting the clang_version / clang_base_path / compiler-rt-path /
+    # bundled-clang-23-flags rabbit hole, since clang's own driver finds
+    # its own resource dir, libc++, and lld.
+    export CC=clang
+    export CXX=clang++
+    export AR=llvm-ar
+    export NM=llvm-nm
+    # Chromium's bundled build/ still pipes -Z (nightly-only) flags to
+    # rustc in some rust_wrapper paths even after rustc_nightly_capability
+    # is forced false (verified empirically — bundled libm / proc-macro2
+    # build scripts still hit `error: option \`Z\` is only accepted on
+    # the nightly compiler` without this env). RUSTC_BOOTSTRAP=1 makes
+    # stable rustc accept -Z flags as if it were nightly. Standard
+    # workaround used by many distro chromium packagers.
+    export RUSTC_BOOTSTRAP=1
+    # Chromium's buildtools/third_party/libc++/__config_site hardcodes
+    # _LIBCPP_HAS_MUSL_LIBC 0 unless ANDROID_HOST_MUSL is set; that file
+    # is force-included into every TU and overrides any -D from CXXFLAGS.
+    # Flip it to 1 so libc++ reaches the musl rune-table path. Same as
+    # Alpine selfisekai/copium cr147-is-musl-libcxx.patch.
+    sed -i 's|#define _LIBCPP_HAS_MUSL_LIBC 0|#define _LIBCPP_HAS_MUSL_LIBC 1|' buildtools/third_party/libc++/__config_site
+    # Chromium's compiler config still adds clang-23-only flags
+    # unconditionally; clang 20 rejects them. Strip the ones we know
+    # break the build. (Selfisekai/copium ships these as proper patches —
+    # cr146 etc. — once we converge on a stable set, port to patches/.)
+    sed -i 's|"-fdiagnostics-show-inlining-chain",\?||g' build/config/compiler/BUILD.gn
+    sed -i 's|"-fno-lifetime-dse",\?||g' build/config/compiler/BUILD.gn
+    sed -i 's|"-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",\?||g' build/config/sanitizers/sanitizers.gni
+    # Chromium hardcodes --target=x86_64-unknown-linux-gnu for clang+linux+x64
+    # (in compiler_cpu_abi.gn at HEAD, but file path varies across build/
+    # revisions). Wrong on musl: clang then ignores its native
+    # alpine-linux-musl triple, libc++ thinks it's on glibc, the rune
+    # table lookup fails. Drop the --target= line wherever it lives so
+    # clang uses its own default (already x86_64-alpine-linux-musl on Alpine).
+    grep -rl '"--target=x86_64-unknown-linux-gnu"' build/config/ | xargs -r sed -i '/"--target=x86_64-unknown-linux-gnu"/d'
+    # Same swap for rust_abi_target. Alpine ships rustlib at
+    # /usr/lib/rustlib/x86_64-alpine-linux-musl, not the chromium-default
+    # /usr/lib/rustlib/x86_64-unknown-linux-gnu. find_std_rlibs.py errors
+    # FileNotFoundError without this swap.
+    grep -rl 'rust_abi_target = "x86_64-unknown-linux-gnu"' build/config/ | xargs -r sed -i 's|rust_abi_target = "x86_64-unknown-linux-gnu"|rust_abi_target = "x86_64-alpine-linux-musl"|'
+    # build/config/rust.gni asserts rust_abi_target appears in
+    # build/rust/known-target-triples.txt. Add the alpine triple.
+    grep -qxF 'x86_64-alpine-linux-musl' build/rust/known-target-triples.txt || echo 'x86_64-alpine-linux-musl' >> build/rust/known-target-triples.txt
+    # rustc_nightly_capability is computed (not declare_args), so the gn-arg
+    # override is ignored. Force false directly. Alpine ships stable rustc;
+    # any -Z flag fails with "option `Z` is only accepted on the nightly
+    # compiler".
+    grep -rl 'rustc_nightly_capability = use_chromium_rust_toolchain || build_with_chromium' build/config/ | xargs -r sed -i 's#rustc_nightly_capability = use_chromium_rust_toolchain || build_with_chromium#rustc_nightly_capability = false#'
+    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=true use_custom_libcxx_for_host=true enable_rust=true rust_sysroot_absolute=\"/usr\" rust_bindgen_root=\"/usr\" rust_force_head_revision=true rustc_version=\"$(rustc --version | cut -d' ' -f2)\" use_partition_alloc_as_malloc=false use_allocator_shim=false"
+  else
+    python3 tools/clang/scripts/update.py
+    CLANG_ARGS="is_clang=true use_custom_libcxx=false use_custom_libcxx_for_host=false"
+  fi
 elif [ "$OS" == "mac" ]; then
   # Apple's libc++ shipped with Xcode 16.x doesn't have std::atomic_ref (first
   # available in libc++ from LLVM 19). V8 14+ uses it internally. Setting
