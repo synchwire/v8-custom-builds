@@ -27,3 +27,24 @@
 <hr/>
 
 > Go along your path, this is a dangerous place.
+
+## Upgrading V8
+
+Notes from the V8 13.6.233.17 → 15.0.1 bump. When re-bumping V8 in the future,
+run each patch in `patches/` through `git apply --check` against the new tag
+and update them as needed.
+
+- **0001 (sharedness of memory)**: still required. The `SharedFlag` enum was
+  renamed in V8 14.x — `kNotShared` → `kNo`, `kShared` → `kYes`. Patch context
+  updated accordingly.
+- **0002 (tags / eh)**: still required, applied unchanged.
+- **0003 (enable exnrefs by default)**: removed. The `experimental_wasm_exnref`
+  flag no longer exists; exception handling has shipped, with `legacy_eh` in
+  V8's shipped feature set and on by default.
+- **0004 (gn-fix)**: removed. V8's `.gn` now uses `exec_script_allowlist`
+  natively; the rename from `whitelist` happened upstream.
+- **0005 (v128 in wasm-c-api)**: still required. `ValueType::heap_representation()`
+  was renamed to `generic_kind()`; patch context updated.
+
+Patches 0001 / 0002 / 0005 touch V8's internal C++ wasm-c-api implementation
+and are likely to need ongoing maintenance as that surface evolves.
