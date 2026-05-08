@@ -76,6 +76,32 @@ for patch in ../patches/*.patch; do
   git apply "$patch"
 done
 
+# V8 14.x+ headers (e.g. src/base/macros.h) use clang-only constructs like
+# __has_warning(...) that GCC's preprocessor can't parse. Use clang on Linux.
+# Download chromium's bundled clang (system clang's runtime library
+# libclang_rt.builtins.a is often absent under apt's clang package).
+if [ "$OS" == "linux" ]; then
+  python3 tools/clang/scripts/update.py
+  CLANG_ARGS="is_clang=true use_custom_libcxx=false use_custom_libcxx_for_host=false"
+elif [ "$OS" == "mac" ]; then
+  # Apple's libc++ shipped with Xcode 16.x doesn't have std::atomic_ref (first
+  # available in libc++ from LLVM 19). V8 14+ uses it internally. Setting
+  # is_clang=true alone isn't enough — chromium's clang would still pick up
+  # Apple's libc++ at compile time when use_custom_libcxx=false. Flip
+  # use_custom_libcxx=true on macOS so V8 builds against chromium's bundled
+  # libc++, which has atomic_ref.
+  #
+  # ABI note: this is safe for the wasmer downstream (Rust binary linking
+  # libwee8.a, only the C wee8 surface crosses the boundary). For
+  # generic-consumer use cases it would mean libwee8.a's C++ symbols come
+  # from chromium's libc++ ABI rather than Apple's; revisit before any
+  # upstream PR that's meant to serve other consumers.
+  python3 tools/clang/scripts/update.py
+  CLANG_ARGS="is_clang=true use_custom_libcxx=true use_custom_libcxx_for_host=true"
+else
+  CLANG_ARGS="is_clang=false use_custom_libcxx=false use_custom_libcxx_for_host=false"
+fi
+
 if [ "$OS" == "ios" ]
 then
 gn gen out/release --args="is_debug=false \
@@ -83,11 +109,9 @@ gn gen out/release --args="is_debug=false \
   symbol_level = 0 \
   is_component_build=false \
   is_official_build=false \
-  use_custom_libcxx=false \
-  use_custom_libcxx_for_host=false \
   use_sysroot=false \
   use_glib=false \
-  is_clang=false \
+  $CLANG_ARGS \
   v8_expose_symbols=true \
   v8_optimized_debug=false \
   v8_enable_sandbox=false \
@@ -114,11 +138,9 @@ gn gen out/release --args="is_debug=false \
   symbol_level = 0 \
   is_component_build=false \
   is_official_build=false \
-  use_custom_libcxx=false \
-  use_custom_libcxx_for_host=false \
   use_sysroot=false \
   use_glib=false \
-  is_clang=false \
+  $CLANG_ARGS \
   v8_expose_symbols=true \
   v8_optimized_debug=false \
   v8_enable_sandbox=false \
