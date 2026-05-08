@@ -95,6 +95,14 @@ if [ "$OS" == "linux" ]; then
     export CXX=clang++
     export AR=llvm-ar
     export NM=llvm-nm
+    # Chromium's bundled build/ still pipes -Z (nightly-only) flags to
+    # rustc in some rust_wrapper paths even after rustc_nightly_capability
+    # is forced false (verified empirically — bundled libm / proc-macro2
+    # build scripts still hit `error: option \`Z\` is only accepted on
+    # the nightly compiler` without this env). RUSTC_BOOTSTRAP=1 makes
+    # stable rustc accept -Z flags as if it were nightly. Standard
+    # workaround used by many distro chromium packagers.
+    export RUSTC_BOOTSTRAP=1
     # Chromium's buildtools/third_party/libc++/__config_site hardcodes
     # _LIBCPP_HAS_MUSL_LIBC 0 unless ANDROID_HOST_MUSL is set; that file
     # is force-included into every TU and overrides any -D from CXXFLAGS.
