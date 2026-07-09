@@ -92,6 +92,11 @@ if [ "$OS" == "linux" ]; then
     sed -i 's|"-fdiagnostics-show-inlining-chain",\?||g' build/config/compiler/BUILD.gn
     sed -i 's|"-fno-lifetime-dse",\?||g' build/config/compiler/BUILD.gn
     sed -i 's|"-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",\?||g' build/config/sanitizers/sanitizers.gni
+    # Drop chromium's hardcoded --target=x86_64-unknown-linux-gnu so clang
+    # falls back to its native default (x86_64-alpine-linux-musl) and finds
+    # the musl crt files / libgcc. (This is a clang-target concern, not rust —
+    # only the rust_abi_target / known-triples / nightly seds are rust-only.)
+    grep -rl '"--target=x86_64-unknown-linux-gnu"' build/config/ | xargs -r sed -i '/"--target=x86_64-unknown-linux-gnu"/d'
     # EXPERIMENT: enable_rust=false. Temporal is disabled, so wee8 pulls no
     # Rust — dropping the rust-toolchain apparatus (glibc-triple swap,
     # known-triples, rustc_nightly_capability override, RUSTC_BOOTSTRAP) that
