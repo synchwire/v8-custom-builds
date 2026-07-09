@@ -86,13 +86,17 @@ if [ "$OS" == "linux" ]; then
     export CXX=clang++
     export AR=llvm-ar
     export NM=llvm-nm
-    # musl uses the system clang via chromium's unbundle:default toolchain
-    # (bundled prebuilt clang is glibc-linked, won't run here). With Temporal
-    # disabled wee8 pulls no Rust, so enable_rust=false drops the whole
-    # rust-toolchain fight (glibc-triple/nightly-rustc mismatch). System
-    # libc++ (use_custom_libcxx=false) avoids the bundled musl-config patch.
-    # partition_alloc/allocator_shim off — they assume glibc struct mallinfo.
-    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=false use_custom_libcxx_for_host=false enable_rust=false use_partition_alloc_as_malloc=false use_allocator_shim=false"
+    # Force libc++ into musl mode (__config_site is force-included, overrides -D).
+    sed -i 's|#define _LIBCPP_HAS_MUSL_LIBC 0|#define _LIBCPP_HAS_MUSL_LIBC 1|' buildtools/third_party/libc++/__config_site
+    # Strip clang-23-only flags that clang 20 rejects.
+    sed -i 's|"-fdiagnostics-show-inlining-chain",\?||g' build/config/compiler/BUILD.gn
+    sed -i 's|"-fno-lifetime-dse",\?||g' build/config/compiler/BUILD.gn
+    sed -i 's|"-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",\?||g' build/config/sanitizers/sanitizers.gni
+    # EXPERIMENT: enable_rust=false. Temporal is disabled, so wee8 pulls no
+    # Rust — dropping the rust-toolchain apparatus (glibc-triple swap,
+    # known-triples, rustc_nightly_capability override, RUSTC_BOOTSTRAP) that
+    # only existed to make chromium's rust build accept Alpine's stable rustc.
+    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=true use_custom_libcxx_for_host=true enable_rust=false use_partition_alloc_as_malloc=false use_allocator_shim=false"
   else
     python3 tools/clang/scripts/update.py
     CLANG_ARGS="is_clang=true use_custom_libcxx=false use_custom_libcxx_for_host=false"
