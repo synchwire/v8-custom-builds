@@ -86,24 +86,13 @@ if [ "$OS" == "linux" ]; then
     export CXX=clang++
     export AR=llvm-ar
     export NM=llvm-nm
-    # Chromium's bundled rust_wrapper still emits -Z flags even with
-    # rustc_nightly_capability=false; bootstrap lets stable rustc accept them.
-    export RUSTC_BOOTSTRAP=1
-    # Force libc++ into musl mode (__config_site is force-included, overrides -D).
-    sed -i 's|#define _LIBCPP_HAS_MUSL_LIBC 0|#define _LIBCPP_HAS_MUSL_LIBC 1|' buildtools/third_party/libc++/__config_site
-    # Strip clang-23-only flags that clang 20 rejects.
-    sed -i 's|"-fdiagnostics-show-inlining-chain",\?||g' build/config/compiler/BUILD.gn
-    sed -i 's|"-fno-lifetime-dse",\?||g' build/config/compiler/BUILD.gn
-    sed -i 's|"-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",\?||g' build/config/sanitizers/sanitizers.gni
-    # Replace chromium's hardcoded x86_64-unknown-linux-gnu triple with alpine's
-    # native one — clang's default is correct; rustlib only ships the alpine path.
-    grep -rl '"--target=x86_64-unknown-linux-gnu"' build/config/ | xargs -r sed -i '/"--target=x86_64-unknown-linux-gnu"/d'
-    grep -rl 'rust_abi_target = "x86_64-unknown-linux-gnu"' build/config/ | xargs -r sed -i 's|rust_abi_target = "x86_64-unknown-linux-gnu"|rust_abi_target = "x86_64-alpine-linux-musl"|'
-    grep -qxF 'x86_64-alpine-linux-musl' build/rust/known-target-triples.txt || echo 'x86_64-alpine-linux-musl' >> build/rust/known-target-triples.txt
-    # rustc_nightly_capability is computed (not a declare_args), so override
-    # the source. Alpine ships stable rustc only.
-    grep -rl 'rustc_nightly_capability = use_chromium_rust_toolchain || build_with_chromium' build/config/ | xargs -r sed -i 's#rustc_nightly_capability = use_chromium_rust_toolchain || build_with_chromium#rustc_nightly_capability = false#'
-    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=true use_custom_libcxx_for_host=true enable_rust=true rust_sysroot_absolute=\"/usr\" rust_bindgen_root=\"/usr\" rust_force_head_revision=true rustc_version=\"$(rustc --version | cut -d' ' -f2)\" use_partition_alloc_as_malloc=false use_allocator_shim=false"
+    # musl uses the system clang via chromium's unbundle:default toolchain
+    # (bundled prebuilt clang is glibc-linked, won't run here). With Temporal
+    # disabled wee8 pulls no Rust, so enable_rust=false drops the whole
+    # rust-toolchain fight (glibc-triple/nightly-rustc mismatch). System
+    # libc++ (use_custom_libcxx=false) avoids the bundled musl-config patch.
+    # partition_alloc/allocator_shim off — they assume glibc struct mallinfo.
+    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=false use_custom_libcxx_for_host=false enable_rust=false use_partition_alloc_as_malloc=false use_allocator_shim=false"
   else
     python3 tools/clang/scripts/update.py
     CLANG_ARGS="is_clang=true use_custom_libcxx=false use_custom_libcxx_for_host=false"
