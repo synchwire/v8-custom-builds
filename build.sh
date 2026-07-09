@@ -86,8 +86,6 @@ if [ "$OS" == "linux" ]; then
     export CXX=clang++
     export AR=llvm-ar
     export NM=llvm-nm
-    # Force libc++ into musl mode (__config_site is force-included, overrides -D).
-    sed -i 's|#define _LIBCPP_HAS_MUSL_LIBC 0|#define _LIBCPP_HAS_MUSL_LIBC 1|' buildtools/third_party/libc++/__config_site
     # Strip clang-23-only flags that clang 20 rejects.
     sed -i 's|"-fdiagnostics-show-inlining-chain",\?||g' build/config/compiler/BUILD.gn
     sed -i 's|"-fno-lifetime-dse",\?||g' build/config/compiler/BUILD.gn
@@ -101,7 +99,7 @@ if [ "$OS" == "linux" ]; then
     # Rust — dropping the rust-toolchain apparatus (glibc-triple swap,
     # known-triples, rustc_nightly_capability override, RUSTC_BOOTSTRAP) that
     # only existed to make chromium's rust build accept Alpine's stable rustc.
-    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=true use_custom_libcxx_for_host=true enable_rust=false use_partition_alloc_as_malloc=false use_allocator_shim=false"
+    CLANG_ARGS="custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" is_clang=true clang_use_chrome_plugins=false use_custom_libcxx=false use_custom_libcxx_for_host=false enable_rust=false use_partition_alloc_as_malloc=false use_allocator_shim=false"
   else
     python3 tools/clang/scripts/update.py
     CLANG_ARGS="is_clang=true use_custom_libcxx=false use_custom_libcxx_for_host=false"
