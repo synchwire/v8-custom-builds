@@ -86,10 +86,9 @@ if [ "$OS" == "linux" ]; then
     export CXX=clang++
     export AR=llvm-ar
     export NM=llvm-nm
-    # Strip clang-23-only flags that clang 20 rejects.
-    sed -i 's|"-fdiagnostics-show-inlining-chain",\?||g' build/config/compiler/BUILD.gn
-    sed -i 's|"-fno-lifetime-dse",\?||g' build/config/compiler/BUILD.gn
-    sed -i 's|"-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",\?||g' build/config/sanitizers/sanitizers.gni
+    # EXPERIMENT C: on Alpine 3.24 (clang 22) test whether the clang-flag
+    # strips are still needed. If CI rejects a specific flag, restore just
+    # that sed.
     # Drop chromium's hardcoded --target=x86_64-unknown-linux-gnu so clang
     # falls back to its native default (x86_64-alpine-linux-musl) and finds
     # the musl crt files / libgcc. (This is a clang-target concern, not rust —
